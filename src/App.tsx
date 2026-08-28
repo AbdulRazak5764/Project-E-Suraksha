@@ -9,6 +9,7 @@ import type {
 } from './types';
 import { getInitialDataStore, saveDataStore } from './utils/storage';
 import type { DataStore } from './utils/storage';
+import { LandingPage } from './components/LandingPage';
 import { Header } from './components/Header';
 import { RoleSelector } from './components/RoleSelector';
 import { LoginPage } from './components/LoginPage';
@@ -22,13 +23,15 @@ import { PaymentModal } from './components/PaymentModal';
 import { GrievanceModule } from './components/GrievanceModule';
 import { QRScanModal } from './components/QRScanModal';
 import { AddInstrumentModal } from './components/AddInstrumentModal';
+import { X } from 'lucide-react';
 
 export function App() {
   const [store, setStore] = React.useState<DataStore>(() => getInitialDataStore());
-  const [currentUser, setCurrentUser] = React.useState<UserProfile | null>(() => store.users[0] || null);
+  const [currentUser, setCurrentUser] = React.useState<UserProfile | null>(null);
   const [currentRole, setCurrentRole] = React.useState<UserRole>('SHOPKEEPER');
 
   // Modals state
+  const [loginModalRole, setLoginModalRole] = React.useState<UserRole | null>(null);
   const [activeCertificateUdii, setActiveCertificateUdii] = React.useState<string | null>(null);
   const [paymentUdiiList, setPaymentUdiiList] = React.useState<string[] | null>(null);
   const [showQRScanner, setShowQRScanner] = React.useState(false);
@@ -49,6 +52,7 @@ export function App() {
   const handleLoginSuccess = (user: UserProfile) => {
     setCurrentUser(user);
     setCurrentRole(user.role);
+    setLoginModalRole(null);
   };
 
   // Register user handler
@@ -230,16 +234,53 @@ export function App() {
 
   const selectedCert = store.certificates.find((c) => c.udii === activeCertificateUdii);
 
-  // If no user is logged in, show Login Page
+  // If NOT logged in, show Landing Page with Login Modal Option
   if (!currentUser) {
     return (
-      <LoginPage
-        users={store.users}
-        onLoginSuccess={handleLoginSuccess}
-        onRegisterUser={handleRegisterUser}
-      />
+      <div>
+        <LandingPage
+          users={store.users}
+          instruments={store.instruments}
+          certificates={store.certificates}
+          onOpenLoginModal={(role) => setLoginModalRole(role)}
+          onSearchUDII={(udii) => setActiveCertificateUdii(udii)}
+        />
+
+        {/* Login Modal Popup */}
+        {loginModalRole && (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="relative w-full max-w-xl">
+              <button
+                onClick={() => setLoginModalRole(null)}
+                className="absolute top-4 right-4 z-50 text-slate-400 hover:text-white transition p-2 bg-slate-900 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <LoginPage
+                users={store.users}
+                onLoginSuccess={handleLoginSuccess}
+                onRegisterUser={handleRegisterUser}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Public Certificate View Modal */}
+        {activeCertificateUdii && selectedCert && (
+          <CertificateModal
+            certificate={selectedCert}
+            onClose={() => setActiveCertificateUdii(null)}
+          />
+        )}
+      </div>
     );
   }
+
+  // Filter user's own instruments if shopkeeper
+  const userInstruments =
+    currentRole === 'SHOPKEEPER'
+      ? store.instruments.filter((i) => i.ownerId === currentUser.id || i.ownerId === 'usr-shopkeeper-1')
+      : store.instruments;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white pb-12">
@@ -265,7 +306,7 @@ export function App() {
         {currentRole === 'SHOPKEEPER' && (
           <BusinessScannerView
             currentUser={currentUser}
-            instruments={store.instruments}
+            instruments={userInstruments}
             certificates={store.certificates}
             alerts={store.alerts}
             businessQrCode={store.businessQrCode}
