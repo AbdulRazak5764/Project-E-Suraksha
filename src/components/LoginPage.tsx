@@ -29,9 +29,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [activeRole, setActiveRole] = React.useState<UserRole>('SHOPKEEPER');
   const [isRegisterMode, setIsRegisterMode] = React.useState(false);
 
-  // Form states
-  const [identifier, setIdentifier] = React.useState('9876543210');
-  const [password, setPassword] = React.useState('password123');
+  // Form states - empty defaults by default for authentic real login
+  const [identifier, setIdentifier] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   // Register Form states
@@ -49,31 +49,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const handleRoleTabChange = (role: UserRole) => {
     setActiveRole(role);
     setErrorMessage(null);
-    if (role === 'SHOPKEEPER') {
-      setIdentifier('9876543210');
-    } else if (role === 'REPAIRER') {
-      setIdentifier('RL-086/RR/2018');
-    } else if (role === 'LMO') {
-      setIdentifier('LMO-TG-HYD-042');
-    } else if (role === 'ADMIN') {
-      setIdentifier('admin@lmd.gov.in');
-    } else {
-      setIdentifier('9876543299');
-    }
+    setIdentifier('');
+    setPassword('');
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
+    if (!identifier.trim()) {
+      setErrorMessage('Please enter your Mobile, Email, License or Employee ID');
+      return;
+    }
+
     // Find user by role & identifier
     const foundUser = users.find(
       (u) =>
         u.role === activeRole &&
-        (u.mobile === identifier ||
-          u.email === identifier ||
-          u.licenseNumber === identifier ||
-          u.employeeId === identifier)
+        (u.mobile === identifier.trim() ||
+          u.email === identifier.trim() ||
+          u.licenseNumber === identifier.trim() ||
+          u.employeeId === identifier.trim())
     );
 
     if (foundUser) {
@@ -84,14 +80,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           id: `usr-guest-${Date.now()}`,
           name: 'Public Consumer',
           address: 'Hyderabad, Telangana',
-          mobile: identifier || '9876543299',
+          mobile: identifier.trim() || '9876543299',
           email: 'consumer@public.in',
           aadhaarHash: 'guest_aadhaar_hash',
           role: 'CONSUMER'
         };
         onLoginSuccess(guestUser);
       } else {
-        setErrorMessage(`No account found for ${activeRole} with credentials "${identifier}". Please Register below.`);
+        setErrorMessage(`No registered ${activeRole} account found matching "${identifier}". Please Register your account below.`);
       }
     }
   };
@@ -99,7 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!regName || !regMobile || !regPassword) {
-      setErrorMessage('Please fill in Name, Mobile and Password');
+      setErrorMessage('Please fill in Name, Mobile Number and Password');
       return;
     }
 
@@ -121,25 +117,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setRegSuccess(true);
     setTimeout(() => {
       onLoginSuccess(newUser);
-    }, 1500);
-  };
-
-  const handleQuickLogin = (demoRole: UserRole) => {
-    const demoUser = users.find((u) => u.role === demoRole);
-    if (demoUser) {
-      onLoginSuccess(demoUser);
-    } else {
-      const fallback: UserProfile = {
-        id: `usr-${demoRole.toLowerCase()}-1`,
-        name: `${demoRole} User`,
-        address: 'Hyderabad, Telangana',
-        mobile: '9876543210',
-        email: `${demoRole.toLowerCase()}@lmd.gov.in`,
-        aadhaarHash: 'demo_hash',
-        role: demoRole
-      };
-      onLoginSuccess(fallback);
-    }
+    }, 1200);
   };
 
   return (
@@ -235,45 +213,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          {/* Quick Demo Login Bar */}
-          <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-2">
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block text-center">
-              ⚡ Quick Demo 1-Click Login (Pre-Loaded Accounts):
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                onClick={() => handleQuickLogin('SHOPKEEPER')}
-                className="bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 text-xs px-2.5 py-1 rounded-lg border border-amber-800 transition font-semibold"
-              >
-                🏪 Ramesh Grocery
-              </button>
-              <button
-                onClick={() => handleQuickLogin('REPAIRER')}
-                className="bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 text-xs px-2.5 py-1 rounded-lg border border-blue-800 transition font-semibold"
-              >
-                🔧 Mr. Sharma (Repairer)
-              </button>
-              <button
-                onClick={() => handleQuickLogin('LMO')}
-                className="bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 text-xs px-2.5 py-1 rounded-lg border border-purple-800 transition font-semibold"
-              >
-                ⚖️ Officer S. Reddy
-              </button>
-              <button
-                onClick={() => handleQuickLogin('CONSUMER')}
-                className="bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 text-xs px-2.5 py-1 rounded-lg border border-emerald-800 transition font-semibold"
-              >
-                🔍 Consumer Public
-              </button>
-              <button
-                onClick={() => handleQuickLogin('ADMIN')}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg border border-slate-700 transition font-semibold"
-              >
-                🏛️ Admin
-              </button>
-            </div>
-          </div>
-
           {errorMessage && (
             <div className="bg-red-950/80 border border-red-800 text-red-300 text-xs p-3 rounded-xl font-medium">
               {errorMessage}
@@ -283,7 +222,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {regSuccess && (
             <div className="bg-emerald-950/80 border border-emerald-700 text-emerald-300 text-xs p-3 rounded-xl font-bold flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Registration Successful! Logging in...</span>
+              <span>Registration Successful! Logging into dashboard...</span>
             </div>
           )}
 
@@ -312,8 +251,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">
                   {activeRole === 'SHOPKEEPER' && 'Mobile Number or Registered Email:'}
-                  {activeRole === 'REPAIRER' && 'Repairer License Number (e.g. RL-086/RR/2018):'}
-                  {activeRole === 'LMO' && 'Government Employee ID (e.g. LMO-TG-HYD-042):'}
+                  {activeRole === 'REPAIRER' && 'Repairer License Number:'}
+                  {activeRole === 'LMO' && 'Government Employee ID:'}
                   {activeRole === 'ADMIN' && 'Official Directorate Email:'}
                   {activeRole === 'CONSUMER' && 'Mobile Number for OTP:'}
                 </label>
@@ -321,6 +260,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <input
                     type="text"
                     required
+                    placeholder={
+                      activeRole === 'SHOPKEEPER'
+                        ? 'Enter Mobile Number or Email'
+                        : activeRole === 'REPAIRER'
+                        ? 'Enter License Number (e.g. RL-086/RR/2018)'
+                        : activeRole === 'LMO'
+                        ? 'Enter Employee ID (e.g. LMO-TG-HYD-042)'
+                        : activeRole === 'ADMIN'
+                        ? 'Enter Email'
+                        : 'Enter Mobile Number'
+                    }
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     className="w-full bg-slate-950 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:ring-2 focus:ring-indigo-500 font-mono font-semibold"
@@ -335,6 +285,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <input
                     type="password"
                     required
+                    placeholder="Enter Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-slate-950 text-white text-xs rounded-xl px-3 py-2.5 border border-slate-700 focus:ring-2 focus:ring-indigo-500 font-mono"
@@ -362,7 +313,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Suresh Kumar"
+                    placeholder="Enter Full Name"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
                     className="w-full bg-slate-950 text-white p-2 rounded-lg border border-slate-700"
@@ -386,7 +337,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <input
                     type="tel"
                     required
-                    placeholder="10-digit Mobile"
+                    placeholder="10-digit Mobile Number"
                     value={regMobile}
                     onChange={(e) => setRegMobile(e.target.value)}
                     className="w-full bg-slate-950 text-white p-2 rounded-lg border border-slate-700 font-mono"
